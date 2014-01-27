@@ -1,0 +1,331 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+
+\addtolength{\voffset}{-1cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\textheight}{2cm}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\usepackage[pdftex]{color}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+    \hypersetup{colorlinks}
+    \hypersetup{linkcolor=blue}
+
+\title{CprE 308 Laboratory 2: Introduction to Unix Processes}
+\author{Department of Electrical and Computer Engineering \\ Iowa State University}
+\date{Fall 2013}
+
+\begin{document}
+\maketitle
+
+\section{Submission}
+Include the following in your lab report:
+\begin{itemize}
+ \item Your full name and lab section in the upper right corner of the first page in large print.
+ \item A cohesive summary of what you learned through the various experiments performed in this
+lab. This should be no more than two paragraphs. Try to get at the main idea of the
+exercises, and include any particular details you found interesting or any problems you
+encountered.
+ \item A write-up of each experiment in the lab. Each experiment has a list of items you need to
+include. For output, cut and paste results from your terminal and summarize when
+necessary. For explanations, keep your answers concise, but include all relevant details.
+\end{itemize}
+
+Type your report and staple the pages together in the following order:
+\begin{enumerate}
+ \item summary sheet
+ \item write-ups for individual experiments.
+\end{enumerate}
+
+\section{Resources}
+The following Unix calls are used in this lab: \cmd{getpid}, \cmd{getppid}, \cmd{sleep}, \cmd{fork}, \cmd{exec}, \cmd{wait}, and \cmd{kill}.
+Use the on-line help (\cmd{man getpid}); the link on fork, exec, and wait on the webpage; or a Unix book for
+further information on Unix calls. You may want to read the comments first -- they will be helpful.
+
+\subsection{Comments on Learning about Unix Processes}
+\begin{enumerate}
+ \item When a system is booted, the first userspace process is \cmd{/sbin/init}, and has a PID of 1.
+This process will in turn launch startup scripts and eventually login prompts. If you do a
+\cmd{ps -el}, you should see that process 1 is init. Init will be the ancestor of all other processes on
+the system.
+ \item When you login or start a terminal, a process for the shell is started. The shell will then launch other processes, which will be children of the shell. If the parent process dies (for example, you exit the shell), init will adopt the orphaned processes (on Linux and many other Unix variants).
+ \item The \emph{status} of a Unix process is shown as the second column of the process table (viewed
+by executing the \cmd{ps} command). Some of the states are R: running, S: sleeping, Z: zombie.
+ \item The call to the \cmd{wait()} function results in a number of actions:
+ \begin{itemize}
+  \item If the calling process has no children, wait() returns -1.
+  \item If the calling process has a child that has terminated (a zombie), that child's PID is returned
+    and it is removed from the process table
+  \item Otherwise, the call blocks (suspends the process) until a child terminates. The \cmd{waitpid()} function allows the \cmd{WNOHANG} flag to be specified to return immediately in all cases.
+ \end{itemize}
+ \item Read the unix man pages (review from Lab 1). The \cmd{man} command displays on-line manual pages with
+information on the command, function, or file specified by name. Unix manual pages are
+gathered into several sections, each section is related to a given topic. Two different sections
+could contain two man pages with the same name. Ex. Man 1 chmod displays section 1 of the
+chmod man pages. Section 1 of the man pages deals with user commands. Man 2 chmod
+displays section 2 of the chmod man pages. Section 2 of the man pages deals with System
+Calls, which will be most of this lab's topic.
+\end{enumerate}
+
+\section{Experiments}
+Execute the C programs given in the following experiments. Observe and interpret the results.
+You will learn about child and parent processes, and much more about Unix processes in
+general, by performing the suggested experiments. We recommend that you read through an
+entire experiment before starting it. Each experiment is worth 10 points.
+
+\subsection{Process Table}
+Run the following program twice, both times as a background process (i.e. suffix it with an
+ampersand ``\cmd{\&}''). Once both processes are running as background processes, view the process
+table (use \cmd{ps -el} to view all processes on the system, or \cmd{ps -l} to view only the processes
+running on your terminal). If you see the message ``I am awake'', the process has finished and
+will no longer show up in the process table.
+
+\begin{verbatim}
+int main(int argc, char** argv) {
+    printf("Process ID is: %d\n", getpid());
+    printf("Parent process ID is: %d\n", getppid());
+    sleep(120); /* sleeps for 2 minutes */
+    printf("I am awake.\n");
+    return 0;
+}
+\end{verbatim}
+If there's too much output, you can scroll back in the terminal window using Konsole, you can
+pipe the output to less, or you can redirect the output to a file.
+\begin{verbatim}
+$ ps -l | less
+\end{verbatim}
+will pipe the output to the program \cmd{less}, and
+\begin{verbatim}
+$ ps -l > out
+\end{verbatim}
+will redirect the output to a file named \cmd{out} (overwriting it if it existed before).
+
+The first line from a ``ps -l'' is duplicated here:
+\begin{verbatim}
+F S     UID     PID  PPID   C PRI    NI ADDR     SZ WCHAN     TTY             TIME CMD
+\end{verbatim}
+You should be able to find descriptions of these fields in the ps man page (\cmd{man ps}). This time
+we'll help you decode the column headers: S is the state, PID and PPID are the process ID and
+parent process ID respectively, and CMD is the name of the program.
+
+\paragraph{6 pts} In the report, include the relevant lines from ``ps -l'' for your programs, and point out the following items:
+ \begin{itemize}
+  \item output
+  \item process name
+  \item process state (decode the letter!)
+  \item process ID (PID)
+  \item parent process ID (PPID)
+ \end{itemize}
+
+\paragraph{2 pts} Repeat this experiment and observe what changes and doesn't change.
+\paragraph{2 pts} Find out the name of the process that started your programs. What is it, and what does it do?
+
+Note: Now that you know how to find a PID for a running program, you can use \cmd{kill} to terminate
+an unwanted process. Just type \cmd{kill} followed by the process ID. If a process refuses to
+terminate, \cmd{kill -9} followed by the process ID will terminate any process you have permission to kill.
+You might also try \cmd{killall} to kill all processes with the same name (man killall).
+
+\subsection{The fork() system call}
+Run the following program and observe the number of statements printed to the terminal.
+The fork() call creates a child that is a copy of the parent process. Because the child is a copy,
+both it and its parent process begin from just after the fork(). All of the statements after a call to
+fork() are executed by both the parent and child processes. However, both processes are now
+separate and changes in one do not affect the other.
+
+Draw a family tree of the processes and explain the results you observed. Try the program
+again without \cmd{sleep(2)}. Explain any differences you see.
+
+\begin{verbatim}
+int main() {
+    fork();
+    fork();
+    usleep(1);
+    printf("Process %d's parent process ID is %d\n", getpid(), getppid());
+    sleep(2);
+    return 0;
+}
+\end{verbatim}
+\paragraph{1 pt} Include the output from the program
+\paragraph{4 pts} Draw the process tree (label processes with PIDs)
+\paragraph{3 pts} Explain how the tree was built in terms of the program code
+\paragraph{2 pts} Explain what happens when the sleep statement is removed. You should see processes reporting a parent PID of 1. Redirecting output to a file may interfere with this, and you may need to run the program multiple times to see it happen.
+
+\subsection{The fork() syscall, continued}
+Run the following program and observe the output. In Unix, fork() returns the value of the
+child's PID to the parent process and zero value to the child process.
+\begin{verbatim}
+#include <stdio.h>
+
+int main() {
+    int ret;
+    ret = fork();
+    if (/* TODO add code here to make the output correct */) {
+        /* this is the child process */
+        printf("The child process ID is %d\n", getpid());
+        printf("The child's parent process ID is %d\n", getppid());
+    } else {
+        /* this is the parent process */
+        printf("The parent process ID is %d\n", getpid());
+        printf("The parent's parent process ID is %d\n", getppid());
+    }
+    sleep(2);
+    return 0;
+}
+\end{verbatim}
+
+\paragraph{2 pts} Include the (completed) program and its output
+\paragraph{4 pts} Speculate why it might be useful to have fork return different values to the parent and child. What advantage does returning the child's PID have?
+Keep in mind that often the parent and child processes need to know each other's PID.
+
+\subsection{Time Slicing}
+Run the following program and observe the result of time slicing. You will have to redirect
+the output to a file or pipe it to less (see exercise 1).
+\begin{verbatim}
+#include <stdio.h>
+
+int main() {
+    int i=0, j=0, pid;
+    pid = fork();
+    if (pid == 0) {
+        for(i=0; i<500000; i++)
+            printf("Child: %d\n", i);
+    } else {
+        for(j=0; j<500000; j++)
+            printf("Parent: %d\n", j);
+    }
+}
+\end{verbatim}
+You may need to increase the number of iterations from 500000 depending on the speed of your machine.
+
+\paragraph{2 pts} Include small (but relevant) sections of the output
+\paragraph{4 pts} Make some observations about time slicing. Can you find any output that appears to
+have been cut off? Are there any missing parts? What's going on (mention the kernel scheduler)?
+
+\subsection{Process synchronization using wait()}
+Run the following program and observe the result of synchronization using wait().
+\begin{verbatim}
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+    int i=0, j=0, ret;
+    ret = fork();
+    if (ret == 0) {
+        printf("Child starts\n");
+        for(i=0; i<500000; i++)
+            printf("Child: %d\n", i);
+        printf("Child ends\n");
+    } else {
+        wait(NULL);
+        printf("Parent starts\n");
+        for(j=0; j<500000; j++)
+            printf("Parent: %d\n", j);
+        printf("Parent ends\n");
+    }
+    return 0;
+}
+\end{verbatim}
+
+\paragraph{6 pts} Explain the major difference between this experiment and experiment 4.
+Be sure to look up what wait does (\cmd{man 2 wait}).
+
+\subsection{Signals using kill()}
+
+Examine and run the following program to observe one use of kill():
+\begin{verbatim}
+#include <stdlib.h>
+#include <stdio.h>
+#include <signal.h>
+
+int main() {
+    int i=0, child;
+    child = fork();
+    if (child == 0) {
+        while (1) {
+            i++;
+            printf("Child at count %d\n", i);
+            /* sleep for 1/100 of a second */
+            usleep(10000);
+        }
+    } else {
+        printf("Parent sleeping\n");
+        sleep(10);
+        kill(child, SIGTERM);
+        printf("Child has been killed. Waiting for it...\n");
+        wait(NULL);
+        printf("done.\n");
+    }
+    return 0;
+}
+\end{verbatim}
+
+\paragraph{2 pts} The program appears to have an infinite loop. Why does it stop?
+\paragraph{4 pts} From the definitions of sleep and usleep, what do you expect the child's count
+ to be just before it ends?
+\paragraph{2 pts} Why doesn't the child reach this count before it terminates?
+
+\subsection{The execve() family of functions}
+Run the following program and explain the results.
+
+\begin{verbatim}
+main() {
+    execl("/bin/ls", "ls", NULL);
+    printf("What happened?\n");
+}
+\end{verbatim}
+\paragraph{8 pts} Read the man page for \cmd{execl} and relatives (\cmd{man 3 exec}).
+Under what conditions is the printf statement executed? Why isn't it always executed?
+(consider what would happen if you changed the program to execute something other than \cmd{/bin/ls}.)
+
+\subsection{The return value of main()}
+Run the following program a few times to observe the use of the status argument to wait():
+\begin{verbatim}
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/wait.h>
+
+int main(int argc, char** argv) {
+    int child, status;
+    child = fork();
+    if (child == 0) {
+        srand(time(NULL));
+        if (rand() < RAND_MAX/4) {
+            /* kill self with a signal */
+            kill(getpid(), SIGTERM);
+        }
+        return rand();
+    } else {
+        wait(&status);
+        if (WIFEXITED(status)) {
+            printf("Child exited with status %d\n", WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            printf("Child exited with signal %d\n", WTERMSIG(status));
+        }
+    }
+    return 0;
+}
+\end{verbatim}
+
+%\paragraph{4 pts} What is the range of values returned from main?
+
+\paragraph{2 pts} What is the range of values returned from the child process?
+
+\paragraph{2 pts} What is the range of values sent by child process and captured by the parent process?
+
+\paragraph{2 pts} When do you think the return value would be useful? Hint: look at the commands \cmd{true} and \cmd{false}.
+
+\subsection{Extra Credit}
+\paragraph{2 pts} What is a zombie process?
+\paragraph{6 pts} Write a program that creates a zombie process and describe how to verify that the zombie process has been created.
+% Thoughts:
+% Use waitpid() in a useful way
+\end{document}
