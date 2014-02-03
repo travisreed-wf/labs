@@ -1,0 +1,264 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+
+\addtolength{\voffset}{-1cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\textheight}{2cm}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\usepackage[pdftex]{color}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+	\hypersetup{colorlinks}
+	\hypersetup{linkcolor=blue}
+
+\title{CprE 308 Laboratory 3: Concurrent Programming with the pthreads Library}
+\author{Department of Electrical and Computer Engineering \\ Iowa State University}
+\date{Spring 2014}
+
+\begin{document}
+\maketitle
+
+\section{Submission}
+
+Include the following in your submission:
+
+\begin{itemize}
+ \item A summary of what you learned in the lab session. This should be no more than two
+ paragraphs. Try to get at the main idea of the exercises, and include any particular
+ details you found interesting or any problems you encountered.
+
+ \item A write-up of each experiment in the lab. Each experiment has a list of items
+ you need to include. For output, cut and paste results from your terminal and
+ summarize when necessary. Include all relevant details.
+
+ \item Submit your summary and write-ups in class.  Be ready to demo your programs to your TAs at the beginning of the next section.
+
+\end{itemize}
+
+\section{Instructions}
+\begin{enumerate}
+ \item Read the \emph{entire} lab description first! Section~\ref{hints} in particular will help you finish the other exercises.
+ \item Manual pages of all different functions that you encounter.
+ \item Read the following man page: \verb!man pthread_cond_wait!
+ \item Refer to Section \ref{hints} in this lab description for further hints on programming.
+\end{enumerate}
+
+\section{Excercises}
+\subsection{Programming with pthreads}
+In this exercise you will learn about concurrent programming using
+pthreads. We will step through a simple program using pthreads:
+
+\begin{itemize}
+ \item Open a new file and include the \cmd{pthread.h} file.
+ Create two new function prototypes called thread1 and thread2 (i.e.
+ ``\verb+void* thread1();+''). These will be the methods that our
+ pthreads will run. Look at the example code
+ in Section \ref{hints}, or in t1.c, and t2.c.
+
+ \item Code the main function. Make two instances of the data
+ type \verb=pthread_t= called ``i1'' and ``i2''.
+
+ \item Create the threads using the \verb=pthread_create= function. Create both threads,
+ passing similar arguments as shown in the example in the help section. The
+ last argument may be passed a value of NULL, since we don’t pass any
+ arguments to our thread1 and thread2 functions.
+
+ \item After the main function write the thread1 and thread2 functions.
+ Just have each function print a message to the screen identifying itself
+ (i.e. \verb+printf("Hello,I am thread 1\n");+). Add a print statement in the end
+ of the main function (i.e. \verb+printf("Hello,I am main process\n");+).
+
+ \item Compile the program using the \cmd{-lpthread} option.
+\begin{verbatim}
+$ gcc -o ex1 -lpthread ex1.c
+\end{verbatim}
+This option compiles the code linked with the pthread library.
+
+\end{itemize}
+
+Run the program and observe the output. What happens? Well, we created the threads, but we forgot to
+use the \verb+pthread_join+ function to allow them to finish before main terminates.
+
+\begin{enumerate}
+\item (6 pts ) To make sure the main terminates before the threads finish,
+ add a sleep(5) statement in the beginning of the thread functions.
+ Can you see the threads' output? Why?
+\item (2 pts ) Add the two \verb=pthread_join= statements just before the printf statement in
+ main. Pass a value of NULL for the second argument.
+ Recompile and rerun the program. What is the output? Why?
+\item (2 pts ) Include your commented code with your submission.
+Label it ``pthread example''.
+\end{enumerate}
+
+
+\subsection{Thread synchronization}
+In this experiment you will learn how to synchronize threads that share a common
+data source. Mutexes and conditional variables are used
+as synchronization mechanisms for pthreads.
+
+\subsubsection{Mutex}
+We will first look at code examples that illustrate how threads
+use mutexes to exclusively access critical area. Download t1.c from
+the class website and examine its contents.
+
+\begin{enumerate}
+\item (2 pts ) Compile and run t1.c, what is the output value of v?
+\item (8 pts) Delete the \verb+pthread_mutex_lock+ and \verb+pthread_mutex_unlock+ statement
+in both increment and decrement threads. Recompile and rerun t1.c,
+what is the output value of v?
+Explain why the output is the same, or different.
+\end{enumerate}
+
+
+\subsubsection{Conditional Variable}
+Next download t2.c. This is a ``Hello World" program using threads.
+The program uses threads to print ``hello world". The thread that prints
+``world" waits for the other thread to finish printing ``hello". This
+is achieved using condition variables.
+
+\begin{itemize}
+\item Modify the program by adding another thread (and routine)
+called ``again" Use a second conditional variable to synchronize
+the three threads so that they print out the statement ``Hello World Again!"
+
+\item To implement this correctly, you must understand why the ``done" flag
+is necessary. Think about the case where the hello function runs first and
+sends the signal before world is waiting (you can use a sleep statement to
+force this case). Note that a signal is not received unless someone is waiting
+for it first. Could the world thread sleep forever? When you make your
+changes, take this problem into account.
+\end{itemize}
+
+\begin{enumerate}
+\item ( 10 pts ) Include your modified code with your lab submission and comment
+on what you added or changed. Label this ``t2.c".
+\end{enumerate}
+
+
+\subsection{Modified Producer Consumer Problem}
+
+Next, you will work on a producer-consumer type problem that is different
+from what we discussed in class. So, please read the description carefully.
+
+Download t3.c from the class website. The goal of this program is to run a
+group of consumers and a single producer in synchronization. The program will
+start one producer thread, which runs the function ``producer", and many
+consumer threads, each of which runs the function ``consumer".
+
+The producer should produce items only when the number of items in the supply has
+reached zero. Until this happens, the producer waits. The producer produces 10
+items each time. When there are no more consumer threads remaining to consume
+items, the producer must exit.
+
+Each consumer thread waits until there is at least one item of supply remaining
+to consume. It then consumes one item of supply, and then exits.
+
+Your task is to fill in the code for the producer. The code for the consumer
+has already been filled in.
+
+\begin{enumerate}
+\item ( 20 pts ) Include your modified code with your lab submission and
+comment on what you added or changed. Label this ``t3.c".
+\end{enumerate}
+
+
+\section{Hints}
+\label{hints}
+
+\subsection{Creating pthreads}
+The function used to create a pthread is:
+\begin{verbatim}
+int pthread_create(pthread_t * thread, pthread_attr_t * attr,
+    void * (*start_routine)(void *), void * arg);
+\end{verbatim}
+This will start a thread using the function pointed to by \verb+start_routine+, which is a function
+pointer. You can think of a function pointer as the starting address of a function. The
+name of a function in C will act as a function pointer. Note the \verb+pthread_create+'s
+prototype calls for a function pointer to a function that takes a void pointer and returns a
+void pointer. If the type is void, how are we going to pass data into the thread?
+The argument of ``\verb+start_routine+'' is separately passed through ``arg''. If \verb+start_routine+ needs
+more than one argument, ``arg'' should point to a structure that encapsulates all of
+the arguments. The code below shows how to typecast the structure to and from a void
+pointer so the \verb+pthread_create+ function can be used correctly.
+\label{createex}
+\begin{verbatim}
+#include <pthread.h>
+
+struct two_args {
+    int arg1;
+    long arg2;
+};
+
+void *foo(void * p) {
+    int local_arg1;
+    long local_arg2;
+    struct two_args * local_args = p;
+    local_arg1 = local_args->arg1;
+    local_arg2 = local_args->arg2;
+    /* continue work */
+}
+
+int main() {
+    pthread_t t; /* t: identifier for thread */
+    struct two_args* ap; /* a pointer to the arguments for "foo" */
+    ap = malloc(sizeof(struct two_args));
+          /* sizeof returns the number of bytes in the structure */
+    ap->arg1 = 1;
+    ap->arg2 = 2;
+
+    pthread_create(&t, NULL, foo, (void*)ap);
+    /* continue work */
+}
+\end{verbatim}
+
+
+
+\subsection{Conditional Variables}
+
+\begin{itemize}
+\item Condition variables allow us to synchronize threads by having them wait
+until a specific condition occurs. In t2.c, the ``world" thread waits until the ``hello"
+thread activates the condition. Once the \verb+pthread_cond_wait+ statement is active,
+it automatically releases the mutex and waits until it receives an active signal.
+When the condition receives its signal, the \verb+pthread_cond_wait+ function is able to
+lock the newly available mutex. Assuming that the mutex can be locked the
+thread continues executing. If the mutex cannot be locked the thread waits
+for ``an unlock" to occur.
+
+\item A helpful construct for waiting might look like this:
+\begin{verbatim}
+pthread_mutex_lock(&mutex)
+while (can’t proceed)
+    pthread_cond_wait(&cond, &mutex)
+pthread_mutex_unlock(&mutex)
+\end{verbatim}
+You must have a mutex locked before waiting. Also, note that while the thread
+is waiting, the mutex is unlocked. It will be locked again when
+the thread resumes.
+
+\item You will find that there are two ways to signal threads waiting on
+a condition variable: \verb+pthread_cond_signal+, and \verb+pthread_cond_broadcast+. The latter
+will allow all threads currently waiting to continue, one after the other. A
+condition variable signal will be received only if another thread is already waiting.
+
+\end{itemize}
+
+
+\subsection{Compilation}
+
+You need to pass the thread library on the \cmd{gcc} or \cmd{g++}
+command line with the option \cmd{-lpthread}.
+\begin{verbatim}
+$ gcc -lpthread -o threads threads.c
+\end{verbatim}
+
+
+\end{document}
