@@ -105,7 +105,7 @@ void *consumer(void *arg)
     pthread_cond_wait(&consumer_cv, &mut);
 
   printf("consumer thread id %d consumes an item\n", cid);
-  fflush(stdin);
+  fflush(stdout);
 
   supply--;
   if (supply == 0)
