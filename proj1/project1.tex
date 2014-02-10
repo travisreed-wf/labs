@@ -1,0 +1,258 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+
+\addtolength{\voffset}{-1cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\textheight}{2cm}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\usepackage[pdftex]{color}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+	\hypersetup{colorlinks}
+	\hypersetup{linkcolor=blue}
+
+\title{CprE 308 Project 1: UNIX Shell}
+\author{Department of Electrical and Computer Engineering \\ Iowa State University}
+\date{Spring 2014}
+
+\begin{document}
+\maketitle
+
+This is a two-week programming project assignment, starting in the week of Feb. 10-14, 2014, 
+and will due in the week of Feb. 24-28, 2014.
+
+\section{Submission}
+Submit to Blackboard system by due date (starting time for your lab session, Feb. 25, 26, and 28, respectively, 2014). 
+Include the following:
+\begin{itemize}
+ \item A cohesive summary of what you learned in the project. This should be no more than two paragraphs.
+ \item A complete listing of your source code; commented and formatted neatly. Use good programming practices
+  (create methods to abstract large bodies of code and code common to multiple methods, only use global
+  variables when you must, and check syscall or system dependant libcall return values for errors – don't assume
+  the OS will always succeed in fulfilling your requests.)
+ \item A Makefile to compile your code. The grader should be able to compile your project by issuing the make command. If needed, please include
+ the instructions to compile the source (in a comment at the top of the .c file), or in the Makefile.
+ \item The assignment should be submitted through Blackboard before the deadline. Your submission should 
+ be a single tar archive containing your source code, your report, and your Makefile. 
+ Your archive should be named shell combined with your name and lab section (e.g. shell-lastname-A.tar.gz). 
+ To create an archive, simply run the command ``{\em tar -czvf shell-lastname-A.tar.gz folder/ }", 
+ where {\em folder/ } is the folder you wish to archive.
+\end{itemize}
+
+\paragraph{Late Policy}
+You will lose 10\% per day for one week. After one week you can no longer receive any credit.
+
+\paragraph{Grading Criteria:}
+\begin{itemize}
+ \item Summary –- 15\% (Well written and specific).
+\end{itemize}
+
+Submitted Source Code
+\begin{itemize}
+ \item Compiles –- 10\% 
+ \item Can be read and understood easily -- 10\%
+ \item Performs the required functionality –- 65\%
+\end{itemize}
+
+\section{Project}
+In this project you will be creating your own version of a UNIX shell. It will not be as sophisticated as \emph{bash},
+the shell you have been using in lab, but it will perform similar functions.
+A UNIX shell is simply an interactive interface between the OS and the user.
+It repeatedly accepts input from the user and initiates processes on the OS based on that input.
+
+\subsection{Requirements}
+\begin{enumerate}
+ \item Your shell should accept a \verb!-p <prompt>! option on the command line when it is initiated. The \verb-<prompt>- option
+       should become the user prompt. If this option is not specified, the default prompt of ``\verb'308sh> ''' should be used.
+       Read section \ref{cmdline} on command line options for more information.
+ \item Your shell must run an infinite loop accepting input from the user and running commands until the user
+       requests to exit.
+ \item Each line of user input should be treated as either a builtin command, or a command to be executed. See section
+  \ref{cmds} for a list of the builtin commands your shell should support.
+ \item For each executed command, the shell should spawn a child process to
+       run the command. The shell should try to run the command exactly as typed. This will require the user to know
+       the full path (absolute \cmd{/some/dir/some/exec} or relative \cmd{../../some/exec}) to the executable, unless the
+       executable they wish to run is in one of the directories listed in the PATH environment variable.
+       HINT: execvp() will search PATH for you.
+ \item The shell should notify the user if the requested command is not found and cannot be run.
+ \item For each spawned child, print the process ID (PID) before executing the specified command.
+       It should only be printed once and it must be printed before any output from the command.
+       You can include other information (name of program, command number, etc) if you find it useful.
+ \item By default, the shell should block (wait for the child to exit) for each command. Thus the prompt will not be
+       available for additional user input until the command has completed. Your shell should only wake up when the
+       \emph{most recently executed} child process completes. See waitpid.
+ \item The shell should evaluate the exit status of the child process and print the conditions under which it exited
+       (identify which process exited by its PID). Read the man page for wait to see a list of macros that provide this
+       information (man 2 wait). Two examples of exit status are normal exit and killed (signaled).
+ \item If the last character in the user input is an ampersand (\&), the child should be run in the background (the
+       shell will not wait for the child to exit before prompting the user for further input). Remove the \& when
+       passing the parameters to exec. When your background process does exit, you must print its status like you do
+       for foreground processes. 
+       
+       An example is, if the user entered ``/usr/bin/emacs” then the shell would wait for 
+       the process to complete before returning to the prompt. However, if the user
+       entered ``/usr/bin/emacs \&” then the prompt would return as soon as the process was initiated.
+
+       HINT: to evaluate and print the exit status of a background child
+       process call waitpid with -1 for the pid and WNOHANG set in the options. This
+       checks all children and doesn’t block – see the man page. To do this periodically,
+       a check can be done every time the user enters a command.
+\end{enumerate}
+
+\subsection{Builtin Commands} \label{cmds}
+The following commands are special commands (also called built-in commands) that are not to be treated as programs to be launched.
+No child process should be spawned when these are entered.
+
+\begin{itemize}
+ \item \cmd{exit} -- the shell should terminate and accept no further input from the user
+ \item \cmd{pid} -- the shell should print its process ID
+ \item \cmd{ppid} -- the shell should print the process ID of its parent
+ \item \cmd{cd <dir>} -- change the working directory. With no arguments, change to the user's home directory
+  (which is stored in the environment variable HOME)
+ \item \cmd{pwd} -- print the current working directory
+ \item \cmd{set <var> <value>} -- sets an environment variable (which is visible in all future child processes).
+  If there is only one argument, clears the variable.
+ \item \cmd{get <var>} -- prints the current value of an environment variable
+\end{itemize}
+
+\subsection{Extra Credit}
+\begin{itemize}
+ \item  Keep track of the names of your child processes and output them with their PIDs (i.e. ``process pid
+  (procnam) ''). For this, you need a data structure which can maintain a list of currently executing background
+  tasks – we suggest using a list. Also, now that you are maintaining a list of background tasks, add another built-
+  in command ``jobs'' that outputs the name and PID of each task running in the background.
+ \item Sometimes it's nice to have your program dump its output to a file rather than the console. In bash (and most
+ shells) if you do \verb+cmd arg1 arg2 argN > filename+ then the output from cmd will go the file \cmd{filename}.
+ If the file doesn't exist, it is created. If it does exist, it is truncated (removes all its data, allowing you to effectively
+ overwrite it). Add this feature to your shell.
+\end{itemize}
+
+\section{Useful Information}
+\subsection{Command line options} \label{cmdline}
+Command line options are options that are passed to a program when it is initiated. For example, to get \cmd{ls} to
+display the size of files as well as their names the \cmd{-l} option is passed to it. (e.g. \cmd{ls –l /home/me}).
+In this example, \cmd{/home/me} is also a command line option which specifies the desired directory for which the contents
+should be listed. From within a C program, command line options are handled using the parameters \cmd{argc} and
+\cmd{argv} which are passed into main.
+\begin{verbatim}
+int main(int argc, char **argv)
+\end{verbatim}
+The parameter \cmd{argc} is a value that contains the number of command line arguments. This value is always at
+least 1, as the name of the executable is always the first parameter. The parameter \cmd{argv} is an array of string
+values that contain the command line options. The first option, as mentioned above, is the name of the
+executed program. The program below simply prints each command line option passed in on its own line.
+\begin{verbatim}
+int main(int argc, char **argv) {
+    int i;
+    for(i=0; i<argc; i++)
+        printf("Option %d is \"%s\"\n", i, argv[i]);
+    return 0;
+}
+\end{verbatim}
+If you are unfamiliar with how command line options work, enter the above program and try it with different
+values. (e.g. \verb+./myprog I guess these are options+)
+\subsection{Useful system and library calls}
+The following system calls will be useful in this project. Read the corresponding man pages for those you are
+unfamiliar with.
+
+\begin{itemize}
+ \item fork -- create a child process
+ \item execvp -- replace the current process with that of the specified program
+ \item waitpid -- wait for a child to exit (or get exit status)
+ \item exit -- force the current process to exit, with the given return value
+ \item chdir -- change working directory
+ \item getcwd -- get current working directory
+ \item getenv/setenv -- retrieve and set environment variables.
+ \item perror -- display error messages based on the value of errno
+ \item strcmp, strcpy, strcat -- string manipulation.
+ \item open, dup2 -- for the extra credit
+\end{itemize}
+
+\section{Example and Test Cases}
+
+This is an example test case and output for your progrem. Your output does not have to look exactly like this;
+it is simply meant to give you some idea of how the shell should work and how output looks.
+ A \verb=$= prompt indicates a bash prompt, used to execute your shell, and \verb+308sh>+ indicates your shell prompt.
+Also, you may want to prefix all your output messages with some sort of identifier,
+such as ``$>>>$”, to more easily determine which lines are yours and which came
+from the executed program.
+
+You should test all of the builtin commands in your shell, in addition to several commands that are not builtin.
+You should test any error handling you use. You do not have to turn in any test code that you use, but don't expect
+to find errors without testing!
+
+Note that you do not have to output the process name on the ``exit'' line unless you are doing the extra credit; just the PID and
+status is sufficient.
+\\[10pt]
+Shell command line:
+\begin{verbatim}
+$ ./shell -p "hello> "
+hello> exit
+$
+\end{verbatim}
+Simple execution:
+\begin{verbatim}
+308sh> /bin/ls
+[977801] ls
+shell.c  shell.o  shell
+[977801] ls Exit 0
+308sh> pwd
+/home/danield/308/
+308sh> cd
+308sh> pwd
+/home/danield/
+308sh> cd 308
+308sh> pwd
+/home/danield/308/
+308sh> ps
+[977819] ps
+   PID TTY          TIME CMD
+  3590 pts/2    00:00:01 bash
+977797 pts/2    00:00:00 shell
+977819 pts/2    00:00:00 ps
+[977819] ps Exit 0
+308sh>
+308sh> nonexistant
+[977850] nonexistant
+Cannot exec nonexistant: No such file or directory
+[977850] nonexistant Exit 255
+308sh> test 2 = 3
+[978229] test
+[978229] test Exit 1
+308sh>
+\end{verbatim}
+Background processes:
+\begin{verbatim}
+308sh> sleep 1 &
+[977999] sleep
+308sh>
+[977999] sleep Exit 0
+308sh>
+
+308sh> sleep 1 &
+[977864] sleep
+308sh> sleep 2
+[977865] sleep
+[977865] sleep Exit 0
+[977864] sleep Exit 0
+308sh>
+
+308sh> sleep 10 &
+[977943] sleep
+308sh> kill 977943
+[977945] kill
+[977945] kill Exit 0
+[977943] sleep Killed (15)
+308sh>
+\end{verbatim}
+
+
+\end{document}
