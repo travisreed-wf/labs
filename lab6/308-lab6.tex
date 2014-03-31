@@ -1,0 +1,146 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+
+\addtolength{\voffset}{-1cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\textheight}{2cm}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+%\usepackage[pdftex]{color}
+%\usepackage[pdftex]{graphicx}
+%\usepackage[pdftex]{hyperref}
+%	\hypersetup{colorlinks}
+%	\hypersetup{linkcolor=blue}
+
+\title{CprE 308 Laboratory 6: Memory Management}
+\author{Department of Electrical and Computer Engineering \\ Iowa State University}
+\date{Spring 2014}
+
+\begin{document}
+\maketitle
+\section{Submission}
+Include the following in your lab report:
+\begin{itemize}
+ \item Your full name and lab section in the upper right corner of the first page in large print.
+ \item A summary of what you learned in the lab session. This should be no more than two
+paragraphs. Try to get at the main idea of the exercises.
+ \item A table that shows the page faults for each of the algorithms using the three sequences.
+ \item Submit your summary, write-ups, and *changed* source code as a written report.
+\end{itemize}
+
+
+\section{Introduction and background}
+In this assignment, you will write a program that simulates three virtual memory page
+replacement algorithms: Optimal (OPT), Least Recently Used (LRU) and First-In-First-Out (FIFO).
+Here is a brief description of the three algorithms that you are going to implement in your code.
+More details can be found in the text book.
+
+\paragraph{{\bf OPT}:} when a page needs arrives into the memory, the OS replaces the page whose next use will
+occur farthest in the future. Note that this algorithm cannot be implemented in the general-purpose OS,
+because the pattern of future page references is usually unknown.
+
+\paragraph{{\bf FIFO}:} This is the simplest page-replacement algorithm. When a page needs to be replaced, the
+page that is chosen is the one which arrived earliest into memory, among all the page frames
+currently in memory. FIFO performs poorly in practice since it ignores the usage history of a
+page and only focuses on the time of arrival. Thus, it is rarely used in its unmodified form.
+
+\paragraph{{\bf LRU}:} The page to be swapped out is the page whose most recent access time is the earliest. LRU
+works on the idea that pages that have been used in the past few instructions are most likely to
+be used in the next few instructions too.
+
+\section{Lab Description}
+We assume an application that uses a total of 128 pages, some of which are on disk, and some
+in memory. The memory has 16 page frames, each of which can hold a single page. Initially, the
+memory is empty, and any page access will result in a {\bf page fault}, which means that the page is
+not in the memory and must be collected from the disk. After that, for each page access, the OS
+first checks the memory. If the page is in memory, then it is a {\bf page hit} where the OS access the
+page from the memory. If the page is not in the memory, then it results in a page fault, where
+the page is retrieved from the disk. On a page fault, if the memory is not full (there is an empty
+page frame), then the page is placed in an empty page frame. If the memory is full (i.e. all 16
+page frames are occupied), then the OS should find a page to be replaced. The replacement
+algorithms that we consider are OPT, LRU, and FIFO: your task is to implement these three
+algorithms.
+
+We maintain a structure for each page frame, which contains the (1)ID of the page in this page
+frame (2) most recent access time of the page, and (3)arrival time of the page. On a page hit, the
+OS updates the time of most recent access. On a page fault, the OS brings the new page to the
+memory and records the last access and memory arrival times to the same value which is the
+current time. The time is the index of the page in the input file. Here is the structure
+representing a page frame.
+\begin{verbatim}
+typedef struct {
+    int page_id;
+    int time_of_access;
+    int time_of_arrival;
+} PageFrame;
+\end{verbatim}
+
+\subsection{Inputs}
+The inputs to the program are page accesses sequences; each sequence consists of 10000
+memory pages accesses. The sequence contains the IDs of the pages that are accessed by the
+application. The time of the access is equal to the index of the entry.
+\begin{enumerate}
+\item First sequence will be sequential (SEQ). The application accesses the pages 1,.. ,128 in
+order, and this sequence is then repeated.
+\item The second sequence is random (RAN): there will be 10000 page IDs, each of them a
+random number between 1 and 128.
+\item The third sequence (LR) is constructed to obey a “locality of reference pattern”. With
+probability 0.9 the next page to be accessed is one of the 5 pages that were recently
+been accessed, and with probability 0.1 a page among the 128 pages will be accessed.
+\end{enumerate}
+
+\subsection{Task}
+Study the code and understand the different parts involved. Then implement the two functions
+``PRAlgo\_OPT" for the optimal algorithm, and ``PRAlgo\_LRU", for the ``Least Recently Used"
+algorithm. One replacement algorithm, ``First in First Out" is already implemented in the
+function ``PRAlgo\_FIFO". You also need to implement your own custom algorithm –
+``PRAlgo\_CUST". This algorithm should be designed by you and the goal is to beat the LRU
+algorithm on the Locality of reference access sequence, you may use whatever information is
+available to the PRAlgo\_CUST function to achieve this.
+
+This code contains three parts. The first part is the generation of the different access sequences,
+which we have written. The second part is the code which reads these sequences of memory
+pages and checks whether each page is in the memory or not. Finally, a function for deciding
+which page in memory should be replaced; this function is called only in case there is a page
+fault AND there is no space for additional pages in memory. You should write the code for the
+third part.
+
+\subsection{Output}
+For each of the given three sequences, should show the number of page faults using each of the
+four algorithms. Therefore, we expect 12 numbers, three per algorithm.
+
+\subsection{Grading}
+The grader will check your code on three sequences and see if your code gives the correct 9
+results for the FIFO, LRU, and OPT algorithms, and whether your CUST algorithm beats LRU on
+the Locality of Reference access sequence.
+
+The grading criteria is as follows:
+
+\begin{itemize}
+\item Summary: 10pts
+\item Compile: 5pts
+\item Code commented: 5pts
+\item Replacement algorithms' implementation:
+\begin{verbatim}
+   OPT: 18pts
+   LRU: 18pts
+   CUST: 18pts
+\end{verbatim}
+\end{itemize}
+
+Testing on three sequences:
+\begin{itemize}
+\item Correct table generation for OPT, LRU, and FIFO: 18pts
+\item Beats LRU on the Locality of Reference access sequence: 8pts
+\end{itemize}
+
+The total points are 100pts
+
+\end{document} 
