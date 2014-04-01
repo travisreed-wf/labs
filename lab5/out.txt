@@ -1,8 +1,3 @@
-/*
- * Output for seed 0xC0FFEE
- */
-
-
 Process	arrival	runtime	priority
 0	10	25	0
 1	69	36	2
@@ -71,32 +66,72 @@ Average time from arrival to finish is 189 seconds.
 
 
 Shortest remaining time
+Process 3 started at time 1
+Process 16 started at time 2
 Process 16 finished at time 12
 Process 3 finished at time 27
+Process 0 started at time 27
+Process 18 started at time 34
 Process 18 finished at time 44
 Process 0 finished at time 62
+Process 4 started at time 62
+Process 6 started at time 74
 Process 6 finished at time 86
+Process 11 started at time 86
+Process 14 started at time 87
 Process 14 finished at time 98
 Process 11 finished at time 110
+Process 5 started at time 110
 Process 5 finished at time 124
 Process 4 finished at time 140
+Process 19 started at time 140
 Process 19 finished at time 158
+Process 2 started at time 158
 Process 2 finished at time 178
+Process 8 started at time 178
 Process 8 finished at time 205
+Process 7 started at time 205
 Process 7 finished at time 233
+Process 9 started at time 233
 Process 9 finished at time 264
+Process 17 started at time 264
 Process 17 finished at time 295
+Process 12 started at time 295
 Process 12 finished at time 327
+Process 10 started at time 327
 Process 10 finished at time 360
+Process 13 started at time 360
 Process 13 finished at time 393
+Process 15 started at time 393
 Process 15 finished at time 428
+Process 1 started at time 428
 Process 1 finished at time 464
 Average time from arrival to finish is 143 seconds.
 
 
 Round Robin
+Process 3 started at time 1
+Process 16 started at time 2
+Process 0 started at time 11
 Process 16 finished at time 26
+Process 9 started at time 28
+Process 17 started at time 29
+Process 18 started at time 34
+Process 10 started at time 38
+Process 4 started at time 49
 Process 3 finished at time 56
+Process 15 started at time 59
+Process 7 started at time 64
+Process 1 started at time 71
+Process 19 started at time 79
+Process 6 started at time 83
+Process 11 started at time 87
+Process 13 started at time 88
+Process 14 started at time 89
+Process 2 started at time 96
+Process 5 started at time 98
+Process 8 started at time 101
+Process 12 started at time 105
 Process 18 finished at time 129
 Process 14 finished at time 263
 Process 0 finished at time 267
@@ -119,9 +154,21 @@ Average time from arrival to finish is 279 seconds.
 
 
 Round Robin with priority
+Process 3 started at time 1
 Process 3 finished at time 17
+Process 16 started at time 17
+Process 0 started at time 18
+Process 9 started at time 28
+Process 10 started at time 34
 Process 10 finished at time 67
+Process 15 started at time 67
+Process 1 started at time 69
 Process 1 finished at time 105
+Process 5 started at time 105
+Process 6 started at time 106
+Process 11 started at time 108
+Process 14 started at time 109
+Process 19 started at time 111
 Process 14 finished at time 180
 Process 6 finished at time 184
 Process 11 finished at time 191
@@ -129,6 +176,14 @@ Process 5 finished at time 194
 Process 19 finished at time 209
 Process 9 finished at time 220
 Process 15 finished at time 231
+Process 17 started at time 232
+Process 18 started at time 233
+Process 2 started at time 235
+Process 4 started at time 236
+Process 7 started at time 237
+Process 8 started at time 238
+Process 12 started at time 239
+Process 13 started at time 240
 Process 16 finished at time 262
 Process 18 finished at time 318
 Process 0 finished at time 399
