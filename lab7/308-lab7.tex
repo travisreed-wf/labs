@@ -1,0 +1,300 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+
+\addtolength{\voffset}{-1cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\textheight}{2cm}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\usepackage[pdftex]{color}
+\usepackage[pdftex]{graphicx}
+\usepackage[pdftex]{hyperref}
+	\hypersetup{colorlinks}
+	\hypersetup{linkcolor=blue}
+
+\title{CprE 308 Laboratory 7: The FAT-12 Filesystem}
+\author{Department of Electrical and Computer Engineering \\ Iowa State University}
+\date{Spring 2014}
+
+\begin{document}
+\maketitle
+
+\section{Submission}
+Turn in your well-formatted and commented source code, a copy of the output, and your written report in class.  The Lab will be worth 60 points total: 10 points for summary, 10 points for output, and 40 points for code.
+
+\section{Introduction}
+In this lab, you will gain hands-on experience reading a FAT-12 filesystem. Using
+information we provide, you will decode the boot sector by hand. You will then write a
+program to do this automatically.
+%In the next section of the lab, you will extend your
+%program to perform the same function as \cmd{ls} in Unix.
+
+\subsection{Terms}
+\paragraph{Sector} the smallest unit of transfer; It's also called a block. There are 512 bytes / sector on a floppy disk.
+\paragraph{Boot sector} stores vital information about the filesystem. The boot sector is laid out in
+the following way, starting at the beginning of the disk (logical sector 0, byte 0):
+
+All values are stored as unsigned little-endian numbers unless otherwise specified.
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+Offset & Length & Contents & Display Format \\ \hline
+0x00 & 3 & Binary offset of boot loader & hex \\
+0x03 & 8 & Volume Label (ASCII, null padded) & ASCII \\
+0x0B & 2 & Bytes / sector & decimal \\
+0x0D & 1 & Sectors / cluster & decimal \\
+0x0E & 2 & Reserved sectors & decimal \\
+0x10 & 1 & Number of FATs (generally 2) & decimal \\
+0x11 & 2 & Number of Root Directory entries & decimal \\
+0x13 & 2 & Number of logical sectors & decimal \\
+0x15 & 1 & Medium descriptor & hex \\
+0x16 & 2 & Sectors per FAT & decimal \\
+0x18 & 2 & Sectors per track & decimal \\
+0x1A & 2 & Number of heads & decimal \\
+0x1C & 2 & Number of hidden sectors & decimal \\
+\hline 
+\end{tabular}
+\caption{The Layout of FAT-12 Boot Sector}
+\label{Bootsector}
+\end{table}
+
+\subsection{Useful system calls}
+\begin{itemize}
+ \item \verb=int open(const char* path, int flags)=
+
+Opens a file at path and returns a file descriptor. For example, 
+\verb+open("/tmp/myfile", O_RDONLY)+ opens an existing file called myfile in the tmp directory in read-only mode.
+It returns a file descriptor that can be used like a handle to the open file.
+
+ \item \verb=ssize_t read(int fd, void *buf, size_t count)=
+
+Reads \verb+count+ bytes from the file descriptor \verb+fd+ into the memory location starting at \verb+buf+. It
+starts reading from the current offset into the file. The offset is set to zero if the file has
+just been opened.
+
+ \item \verb=off_t lseek(int fd, off_t offset, int whence)=
+
+Sets the offset of the file descriptor \verb+fd+ to \verb+offset+, depending on \verb+whence+. If \verb+whence+ is
+\verb+SEEK_SET+, then the offset is figured from the start of the file. If \verb+whence+ is \verb+SEEK_CUR+,
+then the offset is relative to the current offset.
+
+\end{itemize}
+
+
+%\subsection{Little Endian numbers}
+%Before we proceed with the lab assignment, let's first understand ``Little Endian numbers".
+%Numbers in x86-based systems are stored in the little endian format. This means that the most significant
+%byte comes last. For example, if the bytes ``\verb=34 12='' were stored at offset \verb=0xF0= in the
+%file, then we would know that \verb=0x34= is stored at \verb=0xF0=, and \verb=0x12= is stored at
+%\verb=0xF1=. If we interpret this as a ``short'' value (2 bytes) starting at address \verb=0xF0=, then the
+%value appears to be \verb=0x3412=, but it represents \verb=0x1234=. Similarly, if we were storing an int (4 bytes),
+%the bytes would be reverse order, from least to most significant byte.
+%
+%Suppose that you had an array of short values in memory. What would they look like?
+%The array is stored forward in memory, so we would reverse the first two bytes to get the
+%first short. We would reverse the next two bytes to get the second short, and so on.
+%What about a character array? Because a character is only one byte, there is no
+%reversal. An array of ASCII characters should not be reversed.
+
+
+\subsection{Inspecting binary files}
+You should have a floppy disk image from the course website and a program for dumping out
+the boot sector of the disk. In Unix, devices are treated as files. For example,
+the floppy drive is normally found at a device file such as \verb=/dev/fd0=.
+We can use a file image as a substitute for an actual floppy disk. Your floppy image contains a real
+FAT-12 filesystem. Your floppy image contains a real
+FAT-12 filesystem; if you know how the bits are laid
+out, then you can decode the structures that describe the filesystem and work with the
+files. To help get you started, we're going to decode a few fields by hand.
+
+We have supplied you with a program to read from the floppy disk. Given a filename and an
+offset (in decimal notation), it will print out 32 bytes of hex and ASCII values. For example,
+\verb+./bytedump image 1536+ will produce the following output with this particular floppy image:
+{\bf Note that you have to give the offset to \verb+bytedump+ in the decimal format, not in Hex}.
+\begin{verbatim}
+$./bytedump image 1536
+addr value ascii
+0x0600 0x31 1
+0x0601 0x36 6
+0x0602 0x53 S
+0x0603 0x45 E
+0x0604 0x43 C
+…
+0x061e 0x00
+0x061f 0x00
+\end{verbatim}
+
+The first column is the address (in hexadecimal), and the second is the data at that address
+(also in hexadecimal). The third column is the ASCII value of the data, but only if it was fit for
+printing. We can see that \verb+0x31+ is the ASCII character ‘1’, and \verb+0x00+ is not printable.
+
+Note that data is stored in the little endian format. This means that the most significant
+byte comes last. For example, if we had the output
+\begin{verbatim}
+$./bytedump image 120
+addr value ascii
+0x0078 0x20
+0x0079 0x50 P
+\end{verbatim}
+
+We would know that \verb+0x20+ is stored at \verb+0x0078+, and \verb+0x50+ is stored at \verb+0x0079+. If we interpret this as
+a short value (2 bytes) starting at address \verb+0x0078+, then the value is stored as \verb+0x2050+, but it
+represents \verb+0x5020+. Similarly, if we were storing an int (4 bytes), the bytes would be stored in
+reverse order, from the least significant byte to the most significant byte.
+
+When reading data from the floppy disk into memory, we should be careful to understand the
+little endian format. For example, in reading a short value into memory, we should read two
+bytes from the file, and then reverse their order, before storing them into memory as a short
+value. A character is only a single byte, and hence there is no need for reversing the byte order
+if we read a single character from the file.
+
+Alternately, there is a utility in unix called \verb=hexdump= that will show the binary contents
+of a file. This is useful to inspect a file containing binary data. If you use
+\verb=hexdump -C= on the supplied image, the output will look something like this
+(use \verb=hexdump -C image | less= to more easily read it)
+\begin{verbatim}
+00000000  eb 3c 90 6d 6b 64 6f 73  66 73 00 00 02 10 01 00  |.<.mkdosfs......|
+00000010  02 e0 00 40 0b f0 01 00  12 00 02 00 00 00 00 00  |...@............|
+00000020  00 00 00 00 00 00 29 79  d6 c9 3d 20 20 20 20 20  |......)y..=     |
+...
+\end{verbatim}
+The first column is the hexadecimal offset into the file. Since each line contains 16 bytes,
+this will always end in a 0. The middle 16 columns are the hexadecimal bytes of the file.
+The third column contains the ASCII representation of the bytes, or a \verb=.= if the byte is
+not a printable character.
+For example, the second byte, having offset \verb=0x01= has value \verb=0x3c= corresponding to the character
+\verb=<=, while the third byte \verb=0x90= is not printable, so is rendered as a dot.
+
+
+\section{Excercises}
+\subsection{Decoding the boot sector by hand}
+Using the supplied program and the offsets in the tables above, find and decode the values for
+each of the following fields in the boot sector (remember that it starts at offset 0):
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|p{2cm}|p{2cm}|}\hline
+ & Hex & Decimal\\ \hline
+Bytes/sector & & \\ \hline
+Sectors/cluster & & \\ \hline
+Root directory entries & & \\ \hline
+Sectors/FAT & & \\ \hline
+\end{tabular}
+\end{table}
+
+Have the lab instructor check your answers. You will use these values for debugging the next
+part.
+
+\subsection{Decoding the boot sector}
+Create a program to read and then print information from the boot sector. You can use any
+programming language for this, although C is recommended as it more easily deals with binary
+data. The starting offset and size of each field can be found in Table~\ref{Bootsector}.
+All of the information is (of course)
+stored as binary on disk. When you print the values, use the format specified in Table~\ref{Bootsector}.
+Use \verb=printf= to print out values correctly after converting any little endian data.
+
+Call your new program bsdump (see the C program template \verb+bsdump-template.c+).
+Your program should take the name of the file to read, and then decode and print out all of the
+values in the boot sector (you may skip the jump instruction).
+
+\section{Some tips to help maximize your grade}
+\begin{itemize}
+\item Write separate functions to perform the following tasks:
+    \begin{itemize}
+    \item A function for converting shorts from little to big endian.
+    \item A function for decoding the boot sector and storing the values in a struct.
+    \item A function for printing the boot sector from the struct.
+    \end{itemize}
+\item Use Bitwise operators:
+    \begin{verbatim}
+    << left shift
+    >> right shift
+    & and
+    | or
+    \end{verbatim}
+\item Your conversion function should take advantage of bit shifting to reverse the bytes. One
+suggestion is to take two chars and return a short. Restrict your solution to the bitwise
+operators (no multiplication or addition).
+\item Do not write a conversion function for binary to hex or hex to decimal. Let the format
+string in \verb=printf= handle the dirty work. Format strings are described in ``\verb+man 3 printf+".
+
+\item Do not attempt to generalize the decoding process – simply write a function to decode a
+FAT12 boot sector one field after another. You shouldn’t use any loops (except possibly
+for printing the name).
+
+\item Printing tips:
+    \begin{itemize}
+    \item When you print out the values, make the values line up in a column (it’s ok to
+        hardcode spaces). For example, the following would be acceptable:
+        \begin{verbatim}
+           Sectors/cluster 37
+           # of FATs 2
+           Media descriptor 0xA8
+       \end{verbatim}
+    \item Use ``\verb+0x+" to denote a hexadecimal value.
+    \item You can pad variables with zeros – see \verb+bytedump+.
+    \item Be careful when printing the name – it can be 8 characters without a binary zero at
+        the end, so you have to ensure that you never print more than 8.
+    \item Your variables will probably have to be declared ``unsigned" to print correctly.
+    \end{itemize}
+
+\item A comment every 3-4 lines on average should be fine for algorithms. For declarations,
+please put a comment by each that explains what the variable or structure is used for.
+You might look at \verb+bytedump.c+ for an example of the style we’re looking for.
+
+\item Give your variables meaningful names. Indexes are usually i, j, and k, but other variables
+should have more descriptive names.
+
+\item Avoid using global variables unless you really need them. Global variables can be
+modified anywhere in a program, making code difficult to read and to debug.
+
+\item When printing out your code, ensure that the lines do not wrap around. Format your
+source so it fits within the limits of the printer. Not doing so makes it hard to read which
+defeats the purpose of indenting.
+\end{itemize}
+
+%\begin{itemize}
+% \item Make a struct for the data in the boot sector.
+% \item Write a function for converting shorts from little to big endian.
+% \item Don't write a function to convert binary to hex or decimal; use \verb=printf= for this.
+% \item When you print out the values, make the values line up in a column (it's ok to hardcode spaces).
+% \item If the disk name contains 8 characters, it will not contain a null terminator, so you cannot
+%  use \verb=%s= to print it out; use a loop with \verb=putc()=.
+% \item Your variables may need to be declared as unsigned in order to print correctly.
+%\end{itemize}
+
+
+\subsection{Packed structures}
+The simplest way to read in the data from disk is to interpret it one byte at a time,
+and store the data in a structure. However, since structures in C are simply
+a definition of some binary data in memory, it is possible to define a structure that
+describes the FAT12 header.
+
+The file \verb=stdint.h= defines a number of useful types such as \verb=uint16_t=,
+which is an unsigned integer. Integers are always stored in memory in the byte order
+of the system, so you do not need to convert between little and big endian if you use this.
+
+Because several of the fields in the FAT12 header are not aligned to an even or
+odd byte boundary, the definition of a C structure may include padding to allow faster
+memory access. Since this is undesirable, you will need to add \verb=__attribute__((__packed__))=
+after the structure definition. See http://sig9.com/articles/gcc-packed-structures or a C manual
+for more information.
+
+There is no \verb=uint24_t= type; the simplest way to represent a 3-byte field is
+by using an array of 3 \verb=uint8_t= values. Alternatively, you can use a bitfield
+of length 24 -- for an introduction to the bitfield feature of C structures,
+see http://publications.gbdirect.co.uk/c\_book/chapter6/bitfields.html. Bitfields are rarely used
+in data structures as the slow access times due to compiler-generated bitmasking will outweigh the
+memory savings.
+
+You may choose to either use a packed structure or to read the data byte by byte; you do not need
+to do both.
+
+\end{document}
