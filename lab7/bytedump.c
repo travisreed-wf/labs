@@ -18,7 +18,7 @@
 
 /* helper functions for printing out the buffer */
 char printable(char c);
-void bytedump(char *buf, int offset);
+void bytedump(unsigned char *buf, int offset);
 
 
 int main(int argc, char *argv[])
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
 
 /* prints out the buffer one byte at a time */
-void bytedump(char *buf, int offset)
+void bytedump(unsigned char *buf, int offset)
 {
     int i;
     printf("addr   value  ascii\n");
