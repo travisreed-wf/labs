@@ -195,18 +195,22 @@ char * parseAttributes(char string[], unsigned char key)
 	for (i=0;i<13;i++){
 		string[i] = '\0';
 	}
+    //Read
 	if (key & 0x01){
 		string[j] = 'R';
 		j++;
 	}
+    //Hidden
 	if (key & 0x02){
 		string[j] = 'H';
 		j++;
 	}
+    //System
 	if (key & 0x04){
 		string[j] = 'S';
 		j++;
 	}
+    //Archive
 	if (key & 0x20){
 		string[j] = 'A';
 		j++;
@@ -223,12 +227,11 @@ char * parseTime(char string[], unsigned short usTime)
 
     // printf("time: %x||", usTime);
 
-	hour = (usTime >> 11) & 0x1F;
-	min = (usTime >> 5) & 0x3F;
-    sec = usTime & 0x1F;
-	sec = sec * 2;
+	hour = (usTime >> 11) & 0x1F; //5 bits
+	min = (usTime >> 5) & 0x3F; //6 bits
+    sec = usTime & 0x1F; // 5 bits (2 second precision)
+	sec = sec << 2;
 
-    // This is stub code!
 
     sprintf(string, "%02i:%02i:%02i", hour, min, sec);
 
@@ -246,10 +249,9 @@ char * parseDate(char string[], unsigned short usDate)
 
     // printf("date: %x|", usDate);
 
-    year = ((usDate >> 9) & 0x7F) + 1980;
-    month = (usDate >> 5) & 0xF;
-    day = usDate & 0x1F;
-    // This is stub code!
+    year = ((usDate >> 9) & 0x7F) + 1980; //7 bits
+    month = (usDate >> 5) & 0xF; //4 bits
+    day = usDate & 0x1F; //5 bits
 
     sprintf(string, "%d/%d/%d", year, month, day);
 
@@ -265,6 +267,7 @@ char * toDOSName(char string[], unsigned char buffer[], int offset)
 	for (i = 0; i<8;i++){
 		string[i] = buffer[i+offset];
 	}
+    //extension
 	string[8] = '.';
 	for (i=9;i<12;i++){
 		string[i] = buffer[i+offset-1];
