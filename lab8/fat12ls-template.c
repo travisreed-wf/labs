@@ -178,7 +178,7 @@ void parseDirectory(int iDirOff, int iEntries, unsigned char buffer[])
     		// Display Date
     		printf("%s\t", parseDate(string, endianSwap(buffer[i+24], buffer[i+25])));
     		// Display Size
-    		printf("%d\n", (buffer[i+28] + buffer[i+29] + buffer[i+30] + buffer[i+31]));
+    		printf("%d\n", (buffer[i+28] | buffer[i+29] << 8 | buffer[i+30] << 16 | buffer[i+31] << 24));
     	}
     }
 
