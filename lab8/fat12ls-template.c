@@ -246,8 +246,8 @@ char * parseDate(char string[], unsigned short usDate)
 
     // printf("date: %x|", usDate);
 
-    year = ((usDate >> 9) & 0x1F) + 1980;
-    month = (usDate >> 5) & 0x3F;
+    year = ((usDate >> 9) & 0x7F) + 1980;
+    month = (usDate >> 5) & 0xF;
     day = usDate & 0x1F;
     // This is stub code!
 
